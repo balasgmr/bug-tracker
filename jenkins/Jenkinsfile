@@ -1,31 +1,20 @@
 pipeline {
-    environment {
-        // direct Go to use the mounted cache inside the container
-        GOCACHE = '/go/cache'
-        GOPATH = '/go'
-        // keep module download cache at /go/pkg/mod (already mounted)
-        GOMODCACHE = '/go/pkg/mod'
-    }
-    agent {
-        docker {
-            image 'golang:1.22'  // or your preferred Go version
-            // mount a writable directory for Go modules and the Go build cache
-            // - /go/pkg/mod for module cache (read/write)
-            // - ${JENKINS_HOME}/gocache for GOCACHE (prevents writing to /.cache)
-            args "-v ${env.JENKINS_HOME:-/var/jenkins_home}/gocache:/go/cache -v /go/pkg/mod"
-            // set environment variables so Go uses the mounted cache
-            label 'golang'
-        }
-    }
+    agent any
 
     stages {
-        stage('Run Backend Tests') {
-            steps {
-                dir('bugtracker-backend') {
-                    sh 'go version'
-                    sh 'go test -v ./...'
+        stage('Unit Tests - Backend') {
+            agent {
+                docker {
+                    image 'snakee/golang-junit:1.21'
+                    resuseNode true
                 }
+            }
+            steps {
+               dir {'bugtracker-backend'}{
+                     sh 'go test -v ./...'
+               }
             }
         }
     }
 }
+     
