@@ -1,20 +1,32 @@
 pipeline {
     agent any
 
+    environment {
+        // direct Go to use workspace-local caches inside the container
+        GOCACHE = '${env.WORKSPACE}/.gocache'
+        GOMODCACHE = '${env.WORKSPACE}/.gomodcache'
+        GOPATH = '/go'
+    }
+
     stages {
         stage('Unit Tests - Backend') {
             agent {
                 docker {
                     image 'snakee/golang-junit:1.21'
                     reuseNode true
+                    // mount workspace-local directories into the container so they are writable
+                    args "-v ${env.WORKSPACE}:/var/jenkins_home/workspace/${env.JOB_NAME} -v ${env.WORKSPACE}/.gocache:/go/cache -v ${env.WORKSPACE}/.gomodcache:/go/pkg/mod"
                 }
             }
             steps {
                dir ('bugtracker-backend'){
-                     sh 'go test -v ./...'
+                     // ensure cache directories exist inside the workspace (host)
+                     sh 'mkdir -p .gocache .gomodcache || true'
+                     // run tests with GOCACHE and GOMODCACHE that point to the mounted paths
+                     sh 'GOCACHE=/go/cache GOMODCACHE=/go/pkg/mod go test -v ./...'
                }
             }
         }
     }
 }
-     
+    
