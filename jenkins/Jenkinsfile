@@ -9,12 +9,19 @@ pipeline {
                     reuseNode true
                 }
             }
+            environment {
+                // Set Go build cache to workspace to avoid permission issues
+                GOCACHE = "${WORKSPACE}/.gocache"
+            }
             steps {
-               dir ('bugtracker-backend'){
-                     sh 'go test -v ./...'
-               }
+                dir('bugtracker-backend') {
+                    // Make sure cache directory exists
+                    sh 'mkdir -p $GOCACHE'
+                    
+                    // Run Go unit tests
+                    sh 'go test -v ./...'
+                }
             }
         }
     }
 }
-     
