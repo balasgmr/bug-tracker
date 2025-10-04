@@ -16,5 +16,14 @@ pipeline {
             }
             steps {
                 dir('bugtracker-backend') {
-                    // Make sure cache directories exist
-                    sh 'mkd
+                    // Create cache directories and run tests
+                    sh '''
+                        mkdir -p $GOCACHE
+                        mkdir -p $GOPATH
+                        go test -v ./...
+                    '''
+                }
+            }
+        }
+    }
+}
