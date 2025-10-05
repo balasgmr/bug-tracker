@@ -3,31 +3,44 @@ pipeline {
 
     environment {
         NODE_ENV = 'test'
+        // Optional: paths for Go cache if needed
+        GOCACHE = "${WORKSPACE}\\.gocache"
+        GOPATH  = "${WORKSPACE}\\.gopath"
     }
 
     stages {
 
-        stage('Checkout SCM') {
-            steps {
-                echo "Checking out code..."
-                checkout scm
-            }
-        } 
-
         stage('Unit Tests - Backend') {
+            agent {
+                docker {
+                    image 'snakee/golang-junit:1.21'
+                    reuseNode true
+                }
+            }
             steps {
-                echo "Running backend Go tests..."
-                // Run Go tests directly on the agent
-                sh 'go test ./...'
+                dir('bugtracker-backend') {
+                    bat """
+                        if not exist "%GOCACHE%" mkdir "%GOCACHE%"
+                        if not exist "%GOPATH%" mkdir "%GOPATH%"
+                        go test -v ./...
+                    """
+                }
             }
         }
 
         stage('Unit Tests - Frontend') {
+            agent {
+                docker {
+                    image 'node:20-alpine'
+                    reuseNode true
+                }
+            }
             steps {
-                echo "Running frontend React tests..."
                 dir('bugtracker-frontend') {
-                    sh 'npm install'
-                    sh 'npm test -- --coverage --coverageReporters=text-summary --coverageReporters=text --coverageReporters=html --reporters=default --reporters=jest-junit'
+                    bat """
+                        npm ci
+                        npm test -- --coverage --coverageReporters=text-summary --coverageReporters=text --coverageReporters=html --reporters=default --reporters=jest-junit
+                    """
                 }
             }
         }
