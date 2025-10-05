@@ -1,45 +1,49 @@
 pipeline {
     agent any
 
+    environment {
+        NODE_ENV = 'test'
+    }
+
     stages {
-        stage('Unit Tests - Backend') {
-            agent {
-                docker {
-                    image 'snakee/golang-junit:1.21'
-                    reuseNode true
-                }
-            }
-            environment {
-                // Go build cache and module cache inside workspace
-                GOCACHE = "${WORKSPACE}/.gocache"
-                GOPATH  = "${WORKSPACE}/.gopath"
-            }
+
+        stage('Checkout SCM') {
             steps {
-                dir('bugtracker-backend') {
-                    // Create cache directories and run tests
-                    sh '''
-                        mkdir -p $GOCACHE
-                        mkdir -p $GOPATH
-                        go test -v ./...
-                    '''
+                echo "Checking out code..."
+                checkout scm
+            }
+        } 
+
+        stage('Unit Tests - Backend') {
+            steps {
+                echo "Running backend Go tests..."
+                // Run Go tests directly on the agent
+                sh 'go test ./...'
+            }
+        }
+
+        stage('Unit Tests - Frontend') {
+            steps {
+                echo "Running frontend React tests..."
+                dir('bugtracker-frontend') {
+                    sh 'npm install'
+                    sh 'npm test -- --coverage --coverageReporters=text-summary --coverageReporters=text --coverageReporters=html --reporters=default --reporters=jest-junit'
                 }
             }
         }
-        stage ('Unit Tests -Frontend'){
-             agent {
-                  docker{
-                    image 'node:20-alpine'
-                    reuseNode true
-                  }                
-             }
-             steps {
-                dir ('bugtracker-frontend') {
-                    sh '''
-                        npm ci
-                        npm test 
-                    '''
-                }
-             }    
+
+    }
+
+    post {
+        always {
+            echo "Archiving frontend test results..."
+            junit 'bugtracker-frontend/test-results/**/*.xml'  // Adjust path if needed
+        }
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check test results for details."
         }
     }
 }
