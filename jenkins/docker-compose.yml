@@ -1,48 +1,22 @@
 version: '3.8'
 
 services:
-  jenkins-docker:
-    image: docker:dind
-    container_name: jenkins-docker
-    privileged: true
-    environment:
-      - DOCKER_TLS_CERTDIR=/certs
-    volumes:
-      - jenkins-docker-certs:/certs/client
-      - jenkins-data:/var/jenkins_home
-    ports:
-      - "2376:2376"
-    networks:
-      jenkins:
-        aliases:
-          - docker        # 👈 Jenkins will use "docker" hostname
-    command: --storage-driver overlay2
-
   my-jenkins:
     image: jenkins/jenkins:lts
     container_name: my-jenkins
+    privileged: true
     user: root
-    restart: on-failure
-    environment:
-      - DOCKER_HOST=tcp://docker:2376
-      - DOCKER_CERT_PATH=/certs/client
-      - DOCKER_TLS_VERIFY=1
-      - JAVA_OPTS=-Dhudson.model.DirectoryBrowserSupport.CSP="default-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
-    volumes:
-      - jenkins-data:/var/jenkins_home
-      - jenkins-docker-certs:/certs/client:ro
-    depends_on:
-      - jenkins-docker      # 👈 Ensure DinD starts first
+    restart: unless-stopped
     ports:
       - "9000:8080"
       - "50000:50000"
-    networks:
-      - jenkins
-
-networks:
-  jenkins:
-    driver: bridge
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - JAVA_OPTS=-Dhudson.model.DirectoryBrowserSupport.CSP="default-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # 👈 Jenkins talks to Docker directly
+      - /usr/bin/docker:/usr/bin/docker            # 👈 Provides Docker CLI inside Jenkins
 
 volumes:
-  jenkins-docker-certs:
-  jenkins-data:
+  jenkins_home:
