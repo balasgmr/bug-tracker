@@ -21,6 +21,12 @@ pipeline {
                         mkdir -p $GOCACHE
                         mkdir -p $GOPATH
                         go test -v ./...
+
+                        // Generate coverage report
+                        go test -coverprofile=coverage.out -covermode=atomic ./...
+                        go tool cover -html=coverage.out -o coverage.html
+
+
                     '''
                 }
             }
@@ -45,6 +51,11 @@ pipeline {
             post {
                 always{
                     junit 'bugtracker-frontend/test-results.xml'
+                    publishHTML(target: [
+                        reportDir: 'bugtracker-backend/reports',
+                        reportFiles: 'coverage.html',
+                        reportName: 'Backend Coverage Report'
+                    ]) 
                 }
             }
         }
