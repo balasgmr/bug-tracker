@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   jenkins-docker:
     image: docker:dind
@@ -13,12 +15,13 @@ services:
     networks:
       jenkins:
         aliases:
-          - docker
+          - docker        # 👈 Jenkins will use "docker" hostname
     command: --storage-driver overlay2
 
   my-jenkins:
-    image: my-jenkins
+    image: jenkins/jenkins:lts
     container_name: my-jenkins
+    user: root
     restart: on-failure
     environment:
       - DOCKER_HOST=tcp://docker:2376
@@ -28,6 +31,8 @@ services:
     volumes:
       - jenkins-data:/var/jenkins_home
       - jenkins-docker-certs:/certs/client:ro
+    depends_on:
+      - jenkins-docker      # 👈 Ensure DinD starts first
     ports:
       - "9000:8080"
       - "50000:50000"
