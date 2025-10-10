@@ -1,16 +1,15 @@
+version: '3.8'
+
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    build: .
     container_name: my-jenkins
     user: root
     ports:
-      - "9000:8080"
-      - "50000:50000"
+      - "9000:8080"      # Jenkins web UI
+      - "50000:50000"    # Jenkins agent communication
     volumes:
       - ./jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
-    # Optional: install docker-cli automatically on startup
-    command: >
-      bash -c "apt-get update && apt-get install -y docker-ce-cli && exec /usr/bin/tini -- /usr/local/bin/jenkins.sh"
