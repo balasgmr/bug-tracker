@@ -2,32 +2,22 @@ pipeline {
     agent any
 
     environment {
-        // Set Go cache and workspace paths
         GOCACHE = "${WORKSPACE}/.gocache"
         GOPATH  = "${WORKSPACE}/.gopath"
     }
 
     stages {
         stage('Unit Tests - Backend') {
-            agent {
-                docker {
-                    image 'golang:1.21'  // Use official Go Docker image
-                    reuseNode true
-                }
-            }
             steps {
                 dir('bugtracker-backend') {
                     sh '''
-                        echo "Running Go tests..."
+                        echo "Running Go tests in Docker container..."
                         mkdir -p $GOCACHE
                         mkdir -p $GOPATH
 
-                        go mod tidy
-                        go test -v ./...
-
-                        # Generate coverage report
-                        go test -coverprofile=coverage.out -covermode=atomic ./...
-                        go tool cover -html=coverage.out -o coverage.html
+                        # Run Go tests using official golang Docker image
+                        docker run --rm -v $PWD:/app -w /app golang:1.21 \
+                            sh -c "go mod tidy && go test -v ./... && go test -coverprofile=coverage.out -covermode=atomic ./... && go tool cover -html=coverage.out -o coverage.html"
                     '''
                 }
             }
@@ -44,18 +34,12 @@ pipeline {
         }
 
         stage('Unit Tests - Frontend') {
-            agent {
-                docker {
-                    image 'node:20-alpine'  // Use Node image for frontend
-                    reuseNode true
-                }
-            }
             steps {
                 dir('bugtracker-frontend') {
                     sh '''
-                        echo "Running Frontend tests..."
-                        npm ci
-                        npm test
+                        echo "Running Frontend tests in Docker container..."
+                        docker run --rm -v $PWD:/app -w /app node:20-alpine \
+                            sh -c "npm ci && npm test"
                     '''
                 }
             }
