@@ -22,12 +22,20 @@ pipeline {
                         mkdir -p $GOPATH
                         go test -v ./...
 
-                        // Generate coverage report
+                        # Generate coverage report
                         go test -coverprofile=coverage.out -covermode=atomic ./...
                         go tool cover -html=coverage.out -o coverage.html
-
-
                     '''
+                }
+            }
+            post {
+                always {
+                    echo "Backend tests finished."
+                    publishHTML(target: [
+                        reportDir: 'bugtracker-backend',
+                        reportFiles: 'coverage.html',
+                        reportName: 'Backend Coverage Report'
+                    ])
                 }
             }
         }
@@ -41,7 +49,6 @@ pipeline {
             }
             steps {
                 dir('bugtracker-frontend') {
-                    // Install dependencies and run tests
                     sh '''
                         npm ci
                         npm test
@@ -49,15 +56,23 @@ pipeline {
                 }
             }
             post {
-                always{
+                always {
                     junit 'bugtracker-frontend/test-results.xml'
-                    publishHTML(target: [
-                        reportDir: 'bugtracker-backend/reports',
-                        reportFiles: 'coverage.html',
-                        reportName: 'Backend Coverage Report'
-                    ]) 
+                    echo "Frontend tests finished."
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished."
+        }
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check the logs above."
         }
     }
 }
