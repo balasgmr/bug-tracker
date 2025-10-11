@@ -1,25 +1,31 @@
 pipeline {
     agent any
 
+    environment {
+        // Set Go cache and workspace paths
+        GOCACHE = "${WORKSPACE}/.gocache"
+        GOPATH  = "${WORKSPACE}/.gopath"
+    }
+
     stages {
         stage('Unit Tests - Backend') {
             agent {
                 docker {
-                    image 'snakee/golang-junit:1.21'
+                    image 'golang:1.21'  // Use official Go Docker image
                     reuseNode true
                 }
             }
-            environment {
-                GOCACHE = "${WORKSPACE}/.gocache"
-                GOPATH  = "${WORKSPACE}/.gopath"
-            }
             steps {
                 dir('bugtracker-backend') {
-                    echo "Running Go tests..."
                     sh '''
+                        echo "Running Go tests..."
                         mkdir -p $GOCACHE
                         mkdir -p $GOPATH
+
+                        go mod tidy
                         go test -v ./...
+
+                        # Generate coverage report
                         go test -coverprofile=coverage.out -covermode=atomic ./...
                         go tool cover -html=coverage.out -o coverage.html
                     '''
@@ -40,14 +46,14 @@ pipeline {
         stage('Unit Tests - Frontend') {
             agent {
                 docker {
-                    image 'node:20-alpine'
+                    image 'node:20-alpine'  // Use Node image for frontend
                     reuseNode true
                 }
             }
             steps {
                 dir('bugtracker-frontend') {
-                    echo "Running frontend tests..."
                     sh '''
+                        echo "Running Frontend tests..."
                         npm ci
                         npm test
                     '''
