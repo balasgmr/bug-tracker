@@ -1,22 +1,28 @@
 pipeline {
     agent any
 
-    environment {
-        // Go build cache and module cache inside workspace
-        GOCACHE = "${WORKSPACE}/.gocache"
-        GOPATH  = "${WORKSPACE}/.gopath"
-    }
-
     stages {
         stage('Unit Tests - Backend') {
+            agent {
+                docker {
+                    image 'snakee/golang-junit:1.21'
+                    reuseNode true
+                }
+            }
+            environment {
+                GOCACHE = "${WORKSPACE}/.gocache"
+                GOPATH  = "${WORKSPACE}/.gopath"
+            }
             steps {
                 dir('bugtracker-backend') {
+                    echo "Running Go tests..."
                     sh '''
                         mkdir -p $GOCACHE
                         mkdir -p $GOPATH
-                        echo "Running Go tests..."
+                        
+                        # Run tests
                         go test -v ./...
-
+                        
                         # Generate coverage report
                         go test -coverprofile=coverage.out -covermode=atomic ./...
                         go tool cover -html=coverage.out -o coverage.html
@@ -36,34 +42,19 @@ pipeline {
         }
 
         stage('Unit Tests - Frontend') {
+            agent {
+                docker {
+                    image 'node:20-alpine'
+                    reuseNode true
+                }
+            }
             steps {
                 dir('bugtracker-frontend') {
+                    echo "Running frontend tests..."
                     sh '''
-                        echo "Installing Node dependencies..."
                         npm ci
-                        echo "Running frontend tests..."
                         npm test
                     '''
                 }
             }
-            post {
-                always {
-                    junit 'bugtracker-frontend/test-results.xml'
-                    echo "Frontend tests finished."
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo "Pipeline finished."
-        }
-        success {
-            echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed. Check the logs above."
-        }
-    }
-}
+            post
