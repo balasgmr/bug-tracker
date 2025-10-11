@@ -4,6 +4,9 @@ playwright-report/
 playwright/.cache/
 # Ignore Jenkins cache
 jenkins/jenkins_home/caches/
+# Ignore Jenkins home
+jenkins/jenkins_home/
+
 jenkins/jenkins_home/plugins/
 **/test-results/
 **/playwright-report/
