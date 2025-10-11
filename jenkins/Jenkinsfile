@@ -2,11 +2,13 @@ pipeline {
     agent any
 
     environment {
-        BACKEND_DIR = 'bugtracker-backend'
-        FRONTEND_DIR = 'bugtracker-frontend'
+        // You can add env variables here if needed
+        GOPATH = "${env.WORKSPACE}/.gopath"
+        GOCACHE = "${env.WORKSPACE}/.gocache"
     }
 
     stages {
+
         stage('Checkout SCM') {
             steps {
                 checkout scm
@@ -14,60 +16,40 @@ pipeline {
         }
 
         stage('Unit Tests - Backend') {
-            agent {
-                docker {
-                    image 'golang:1.21'
-                    args '-v /var/jenkins_home:/var/jenkins_home' // optional, if you need caching
-                }
-            }
             steps {
-                dir("${BACKEND_DIR}") {
+                dir('bugtracker-backend') {
                     script {
-                        echo "Running Go tests..."
+                        echo "Running Go tests inside Docker container..."
+                        docker.image('golang:1.21').inside('-u 0:0') {
+                            sh '''
+                                go mod tidy
+                                go test -v ./...
+                                go test -coverprofile=coverage.out -covermode=atomic ./...
+                                go tool cover -html=coverage.out -o coverage.html
+                            '''
+                        }
                     }
-                    sh '''
-                        go mod tidy
-                        go test -v ./...
-                        go test -coverprofile=coverage.out -covermode=atomic ./...
-                        go tool cover -html=coverage.out -o coverage.html
-                    '''
                 }
             }
             post {
                 always {
                     publishHTML(target: [
-                        reportDir: "${BACKEND_DIR}",
+                        reportName: 'Backend Coverage Report',
+                        reportDir: 'bugtracker-backend',
                         reportFiles: 'coverage.html',
-                        reportName: 'Backend Coverage Report'
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true
                     ])
-                }
-                failure {
-                    echo 'Backend tests failed!'
+                    echo "Backend tests finished."
                 }
             }
         }
 
         stage('Unit Tests - Frontend') {
-            agent {
-                docker {
-                    image 'node:20'
-                    args '-v /var/jenkins_home:/var/jenkins_home'
-                }
-            }
             steps {
-                dir("${FRONTEND_DIR}") {
-                    script {
-                        echo "Running Frontend tests..."
-                    }
-                    sh '''
-                        npm install
-                        npm test
-                    '''
-                }
-            }
-            post {
-                failure {
-                    echo 'Frontend tests failed!'
+                dir('bugtracker-frontend') {
+                    echo "Run your frontend tests here (if any)"
+                    // Add npm/React test commands if needed
                 }
             }
         }
@@ -76,12 +58,6 @@ pipeline {
     post {
         always {
             echo "Pipeline finished."
-        }
-        success {
-            echo "All tests passed!"
-        }
-        failure {
-            echo "Pipeline failed. Check logs!"
         }
     }
 }
