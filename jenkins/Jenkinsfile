@@ -19,11 +19,7 @@ pipeline {
                     sh '''
                         mkdir -p $GOCACHE
                         mkdir -p $GOPATH
-                        
-                        # Run tests
                         go test -v ./...
-                        
-                        # Generate coverage report
                         go test -coverprofile=coverage.out -covermode=atomic ./...
                         go tool cover -html=coverage.out -o coverage.html
                     '''
@@ -57,4 +53,24 @@ pipeline {
                     '''
                 }
             }
-            post
+            post {
+                always {
+                    junit 'bugtracker-frontend/test-results.xml'
+                    echo "Frontend tests finished."
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished."
+        }
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check the logs above."
+        }
+    }
+}
