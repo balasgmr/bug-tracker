@@ -2,9 +2,9 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-# Install Docker CLI
+# Install Git + Docker CLI
 RUN apt-get update && \
-    apt-get install -y ca-certificates curl gnupg lsb-release && \
+    apt-get install -y git ca-certificates curl gnupg lsb-release && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     chmod a+r /etc/apt/keyrings/docker.gpg && \
@@ -14,3 +14,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 USER jenkins
+    
