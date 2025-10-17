@@ -48,8 +48,12 @@ pipeline {
         stage('Unit Tests - Frontend') {
             steps {
                 dir('bugtracker-frontend') {
-                    echo "Run your frontend tests here (if any)"
-                    // Add npm/React test commands if needed
+                    sh '''
+                        npm ci
+                        npm test
+                        mkdir -p reports
+                        mv coverage reports/
+                    '''
                 }
             }
         }
@@ -57,7 +61,15 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline finished."
+            junit 'bugtracker-frontend/test-results.xml'
+            publishHTML target: [
+                reportName: 'Frontend Coverage Report',
+                reportDir: 'bugtracker-frontend/reports/coverage',
+                reportFiles: 'index.html',
+                allowMissing: true,
+                alwaysLinkToLastBuild: true
+            ]
+
         }
     }
 }
