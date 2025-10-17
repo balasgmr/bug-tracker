@@ -21,6 +21,8 @@ pipeline {
                         echo "Running Go tests inside Docker container..."
                         docker.image('golang:1.21').inside('-u 0:0') {
                             sh '''
+                                go install github.com/jstemmer/go-junit-report@latest
+                                export PATH=$PATH:$(go env GOPATH)/bin
                                 go mod tidy
                                 go test -v ./... | tee go-test.out | go-junit-report > report.xml
                                 go test -coverprofile=coverage.out -covermode=atomic ./...
