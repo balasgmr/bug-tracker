@@ -48,15 +48,17 @@ pipeline {
         stage('Unit Tests - Frontend') {
             steps {
                 dir('bugtracker-frontend') {
-                    sh '''
-                        npm ci
-                        npm test
-                        mkdir -p reports
-                        mv coverage reports/
-                    '''
+                script {
+                    docker.image('node:18').inside {
+                    sh 'npm ci'
+                    sh 'npm test -- --ci --reporters=jest-junit'
+                    }
                 }
+                }
+                junit 'bugtracker-frontend/junit.xml'
             }
-        }
+            }
+
     }
 
     post {
