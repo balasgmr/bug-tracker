@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // You can add env variables here if needed
         GOPATH = "${env.WORKSPACE}/.gopath"
         GOCACHE = "${env.WORKSPACE}/.gocache"
     }
@@ -23,7 +22,7 @@ pipeline {
                         docker.image('golang:1.21').inside('-u 0:0') {
                             sh '''
                                 go mod tidy
-                                go test -v ./...
+                                go test -v ./... | tee go-test.out | go-junit-report > report.xml
                                 go test -coverprofile=coverage.out -covermode=atomic ./...
                                 go tool cover -html=coverage.out -o coverage.html
                             '''
@@ -33,6 +32,7 @@ pipeline {
             }
             post {
                 always {
+                    junit 'bugtracker-backend/report.xml'
                     publishHTML(target: [
                         reportName: 'Backend Coverage Report',
                         reportDir: 'bugtracker-backend',
@@ -48,30 +48,29 @@ pipeline {
         stage('Unit Tests - Frontend') {
             steps {
                 dir('bugtracker-frontend') {
-                script {
-                    docker.image('node:18').inside {
-                    sh 'npm ci'
-                    sh 'npm test -- --ci --reporters=jest-junit'
+                    script {
+                        docker.image('node:18').inside {
+                            sh '''
+                                npm ci
+                                npm test -- --ci --reporters=default --reporters=jest-junit
+                            '''
+                        }
                     }
-                }
                 }
                 junit 'bugtracker-frontend/junit.xml'
             }
+            post {
+                always {
+                    publishHTML(target: [
+                        reportName: 'Frontend Coverage Report',
+                        reportDir: 'bugtracker-frontend/coverage',
+                        reportFiles: 'index.html',
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true
+                    ])
+                    echo "Frontend tests finished."
+                }
             }
-
-    }
-
-    post {
-        always {
-            junit 'bugtracker-frontend/test-results.xml'
-            publishHTML target: [
-                reportName: 'Frontend Coverage Report',
-                reportDir: 'bugtracker-frontend/reports/coverage',
-                reportFiles: 'index.html',
-                allowMissing: true,
-                alwaysLinkToLastBuild: true
-            ]
-
         }
     }
 }
